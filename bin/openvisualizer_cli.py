@@ -9,24 +9,33 @@ import logging
 import logging.config
 import os
 import signal
+import sys
 import threading
 import time
 from argparse import ArgumentParser
 from cmd import Cmd
 
 import bottle
+import coloredlogs
 
 # do not remove the line below, prevents PyCharm from optimizing out the Python path modification
 # noinspection PyUnresolvedReferences
 import helpers.build_python_path
 import openvisualizer_app
 import utils as u
+from openvisualizer.jrc import jrc
+from openvisualizer.motehandler.moteconnector.openparser import parseriec
 from openvisualizer.motehandler.motestate.motestate import MoteState
+from openvisualizer.openlbr import sixlowpan_frag
+from openvisualizer.opentun import opentun, opentunwindows, opentunmacos, opentunlinux
+from openvisualizer.rpl import rpl
 from webserver import WebServer
 
 # do not remove line below, prevents PyCharm from optimizing out the next import
 
 log = logging.getLogger('OpenVisualizerCli')
+
+coloredlogs.install()
 
 
 class OpenVisualizerCli(Cmd):
@@ -47,8 +56,8 @@ class OpenVisualizerCli(Cmd):
 
     def start_webserver(self, args):
         log.info(
-            'Initializing webserver with options: \n\t{0}'.format(
-                '\n\t'.join(
+            'Initializing webserver with options: \n\t\t{0}'.format(
+                '\n\t\t'.join(
                     ['host: {0}'.format(args.host), 'port: {0}'.format(args.port)]
                 )
             )
@@ -213,11 +222,19 @@ def _add_parser_args(parser):
     )
 
     parser.add_argument(
+        '--no-color',
+        dest='no_color',
+        default=False,
+        action='store_true',
+        help='disables colored logging output'
+    )
+
+    parser.add_argument(
         '-o', '--simTopology',
         dest='sim_topology',
         default='',
         action='store',
-        help='force a certain toplogy (simulation mode only)'
+        help='force a certain topology (simulation mode only)'
     )
 
     parser.add_argument(
@@ -325,12 +342,36 @@ def main():
     logging.config.fileConfig(os.path.join(conf_dir, 'logging.conf'),
                               {'logDir': u.force_slash_sep(log_dir, args.debug)})
 
-    # initialize openvisualizer application
+    if not args.no_color:
+        loggers = [parseriec.log, rpl.log, jrc.log, opentun.log, log, openvisualizer_app.log, sixlowpan_frag.log]
+        style = '%(asctime)s %(levelname)s %(message)s'
+        datefmt = '%H:%M:%S'
+
+        if sys.platform.startswith('win32'):
+            fs = {'asctime': {'color': 'cyan'}, 'levelname': {'bold': True, 'color': 'cyan'}}
+            ls = {'critical': {'bold': True, 'color': 'red'}, 'error': {'color': 'red', 'bold': True},
+                  'warning': {'color': 'yellow'}, 'success': {'bold': True, 'color': 'green'}}
+            loggers.append(opentunwindows.log)
+        else:
+            fs = {'asctime': {'color': 35}, 'levelname': {'bold': True, 'color': 31}}
+            ls = {'critical': {'bold': True, 'color': 'red'}, 'error': {'color': 124},
+                  'verbose': {'color': 87}, 'warning': {'color': 166},
+                  'success': {'color': 83, 'bold': True}}
+            if sys.platform.startswith('darwin'):
+                loggers.append(opentunmacos.log)
+            else:
+                loggers.append(opentunlinux.log)
+
+        for lg in loggers:
+            coloredlogs.install(level='VERBOSE', logger=lg, fmt=style, datefmt=datefmt, field_styles=fs,
+                                level_styles=ls)
+
+    # initialize OpenVisualizer application
     app = openvisualizer_app.main(parser, conf_dir, data_dir, log_dir, DEFAULT_MOTE_COUNT)
     cli = OpenVisualizerCli(app)
 
-    log.debug('Using external dirs:\n    {}'.format(
-        '\n    '.join(['conf     = {0}'.format(conf_dir),
+    log.debug('Using external dirs:\n\t\t{}'.format(
+        '\n\t\t'.join(['conf     = {0}'.format(conf_dir),
                        'data     = {0}'.format(data_dir),
                        'log      = {0}'.format(log_dir)],
                       )))

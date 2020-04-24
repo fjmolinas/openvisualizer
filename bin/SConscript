@@ -59,6 +59,9 @@ def ov_runner(target, source, env):
     if env['DEBUGOPT']:
         arg_list.append('--debug')
 
+    if env['COLOR']:
+        arg_list.append('--no-color')
+
     if env['TRACE']:
         arg_list.append('--trace')
 

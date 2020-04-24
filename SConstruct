@@ -48,6 +48,7 @@ Targets:
           --opentun     Use TUN device to route to the Internet (requires superuser privileges, e.g., sudo).
           --host        Specify host to deploy webserver. Default is 'localhost'.
           --port        Specify port on which webserver will listen.
+          --no-color    Disable colored logs.
           --simTopo=<linear|fully-meshed>
           --trace       Use the Yappi profiler.
           --mqtt-broker Specify the address of the mqtt-broker used for logging, e.g., 'argus.paris.inria.fr'.
@@ -145,6 +146,12 @@ AddOption('--trace',
           default=False,
           action='store_true')
 runnerEnv['TRACE'] = GetOption('traceOpt')
+
+AddOption('--no-color',
+          dest='colorOpt',
+          default=False,
+          action='store_true')
+runnerEnv['COLOR'] = GetOption('colorOpt')
 
 AddOption('--simTopo',
           dest='simTopology',
