@@ -36,13 +36,11 @@ log.addHandler(logging.NullHandler())
 
 # ============================ defines =========================================
 
-BAUDRATE_LOCAL_BOARD = 115200
 BAUDRATE_IOTLAB = 500000
-
 
 # ============================ functions =======================================
 
-def find_serial_ports(is_iot_motes=False, port_mask=None):
+def find_serial_ports(is_iot_motes=False, port_mask=None, baudrates=[115200]):
     """
     Returns the serial ports of the motes connected to the computer.
 
@@ -63,7 +61,7 @@ def find_serial_ports(is_iot_motes=False, port_mask=None):
                     except:
                         pass
                     else:
-                        serial_ports.append((str(val[1]), BAUDRATE_LOCAL_BOARD))
+                        serial_ports.append(str(val[1]))
             except Exception:
                 pass
 
@@ -73,30 +71,39 @@ def find_serial_ports(is_iot_motes=False, port_mask=None):
             else:
                 port_mask = ['/dev/ttyUSB*']
             for mask in port_mask:
-                serial_ports += [(s, BAUDRATE_IOTLAB) for s in glob.glob(mask)]
+                serial_ports += [(s) for s in glob.glob(mask)]
     else:
         for mask in port_mask:
-            serial_ports += [(s, BAUDRATE_IOTLAB) for s in glob.glob(mask)]
+            serial_ports += [(s) for s in glob.glob(mask)]
 
     mote_ports = []
 
     if is_iot_motes:
         # this is IoTMotes, use the ports directly
-        mote_ports = serial_ports
+        mote_ports = [(port, BAUDRATE_IOTLAB) for port in serial_ports]
     else:
         # Find all OpenWSN motes that answer to the TRIGGER_SERIALECHO commands
         for port in serial_ports:
-            probe = MoteProbe(mqtt_broker_address=None, serial_port=(port[0], BAUDRATE_LOCAL_BOARD))
-            while not hasattr(probe, 'serial'):
-                pass
-            tester = SerialTester(probe)
-            tester.set_num_test_pkt(1)
-            tester.set_timeout(2)
-            tester.test(blocking=True)
-            if tester.get_stats()['numOk'] >= 1:
-                mote_ports.append((port[0], BAUDRATE_LOCAL_BOARD))
-            probe.close()
-            probe.join()
+            try:
+                for baudrate in baudrates:
+                    log.debugp("Probing port {} at baud {}".format(port, baudrate))
+                    probe = MoteProbe(mqtt_broker_address=None, serial_port=(port, baudrate))
+                    while not hasattr(probe, 'serial'):
+                        pass
+                    tester = SerialTester(probe)
+                    tester.set_num_test_pkt(1)
+                    tester.set_timeout(2)
+                    tester.test(blocking=True)
+                    if tester.get_stats()['numOk'] >= 1:
+                        mote_ports.append((port, baudrate))
+                        break
+            except Exception as e:
+                raise e
+            else:
+                if hasattr(probe, 'serial'):
+                    probe.close()
+                    probe.join()
+
 
     # log
     log.info("discovered following serial-port(s): {0}".format(['{0}@{1}'.format(s[0], s[1]) for s in mote_ports]))
