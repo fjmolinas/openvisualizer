@@ -1,12 +1,10 @@
-import glob
+
+#! /usr/bin/env python
+# -*- coding:utf-8 -*-
+
 import os
-import platform
-import shutil
 
-from setuptools import setup
-from setuptools.command.build_py import build_py as _build_py
-
-from openvisualizer import version
+from setuptools import setup, find_packages
 
 '''
 This implementation of the traditional setup.py uses the root package's package_data parameter to store data files, 
@@ -19,91 +17,61 @@ setup.py.
 This implementation is based on setuptools, and builds the list of module dependencies by reading 'requirements.txt'.
 '''
 
-VERSION = '.'.join([str(v) for v in version.VERSION])
-web_static = 'data/web_files/static'
-web_templates = 'data/web_files/templates'
-sim_data = 'data/sim_files'
-with open('README.md') as f:
-    LONG_DESCRIPTION = f.read()
+PACKAGE = 'openVisualizer'
+LICENSE = 'BSD 3-Clause'
 
-# Create list of required modules for 'install_requires' parameter. Cannot create
-# this list with pip.req.parse_requirements() because it requires the pwd module,
-# which is Unix only.
-# Assumes requirements file contains only module lines and comments.
-deplist = []
-with open(os.path.join('requirements.txt')) as f:
-    for line in f:
-        if not line.startswith('#'):
-            deplist.append(line)
-
-
-def appdir_glob(globstr, subdir=''):
-    app_dir = 'bin'
-    if subdir == '':
-        return glob.glob('/'.join([app_dir, globstr]))
-    else:
-        return glob.glob('/'.join([app_dir, subdir, globstr]))
-
-
-class build_py(_build_py):
+def get_version(package):
+    """ Extract package version without importing file.
+    Inspired from iotlab-cli setup.py
     """
-    Extends setuptools build of openvisualizer package data at installation time.
-    Selects and copies the architecture-specific simulation module from an OS-based
-    subdirectory up to the parent 'sim_files' directory. Excludes the OS subdirectories
-    from installation.
-    """
+    with open(os.path.join(package, '__init__.py')) as init_fd:
+        for line in init_fd:
+            if line.startswith('__version__'):
+                return eval(line.split('=')[-1])  # pylint:disable=eval-used
 
-    def build_package_data(self):
-        _build_py.build_package_data(self)
+WEB_STATIC = 'bin/web_files/static'
+WEB_TEMPLATES = 'bin/web_files/templates'
+SIM_DATA = 'bin/sim_files'
 
-        os_name = 'windows' if os.name == 'nt' else 'linux'
-        suffix = 'amd64' if platform.architecture()[0] == '64bit' else 'x86'
-        file_ext = 'pyd' if os.name == 'nt' else 'so'
+LONG_DESCRIPTION = ['README.rst']
 
-        sim_path = None
-        for package, src_dir, build_dir, filenames in self.data_files:
-            for filename in filenames:
-                module_name = 'oos_openwsn-{0}.{1}'.format(suffix, file_ext)
-                module_path = os.path.join(os_name, module_name)
-                if package == 'openvisualizer' and filename.endswith(module_path):
-                    src_file = os.path.join(src_dir, filename)
-                    sim_path = os.path.join(build_dir, 'data', 'sim_files')
-                    target = os.path.join(sim_path, 'oos_openwsn.{0}'.format(file_ext))
-                    self.copy_file(src_file, target)
+REQUIREMENTS = [i.strip() for i in open("requirements.txt").readlines()]
 
-        if sim_path:
-            shutil.rmtree(os.path.join(sim_path, 'linux'))
-            shutil.rmtree(os.path.join(sim_path, 'windows'))
+SCRIPTS = ['openv-cli']
 
+DEPRECATED_SCRIPTS = [
+    'opencli.py',
+    'openvisualizer_cli.py',
+    'openvisualizer_app.py',
+    'webserver.py'
+    ]
+
+SCRIPTS += DEPRECATED_SCRIPTS
 
 setup(
-    name='openVisualizer',
-    packages=['openvisualizer',
-              'openvisualizer.bspemulator', 'openvisualizer.eventbus', 'openvisualizer.motehandler.moteconnector',
-              'openvisualizer.motehandler.moteprobe', 'openvisualizer.motehandler.motestate',
-              'openvisualizer.openlbr', 'openvisualizer.opentun', 'openvisualizer.rpl', 'openvisualizer.simengine',
-              'openvisualizer.jrc'],
-    scripts=[appdir_glob('openvisualizer*.py'), appdir_glob('webserver.py')],
+    name=PACKAGE,
+    version=get_version(PACKAGE.lower()),
+    packages=find_packages(),
+    scripts=SCRIPTS,
     package_dir={'': '.', 'openvisualizer': 'openvisualizer'},
     # Copy sim_data files by extension so don't copy .gitignore in that directory.
     package_data={'openvisualizer': [
-        'data/*.conf',
-        'data/requirements.txt',
-        '/'.join([web_static, 'css', '*']),
-        '/'.join([web_static, 'font-awesome', 'css', '*']),
-        '/'.join([web_static, 'font-awesome', 'fonts', '*']),
-        '/'.join([web_static, 'images', '*']),
-        '/'.join([web_static, 'js', '*.js']),
-        '/'.join([web_static, 'js', 'plugins', 'metisMenu', '*']),
-        '/'.join([web_templates, '*']),
-        '/'.join([sim_data, 'windows', '*.pyd']),
-        '/'.join([sim_data, 'linux', '*.so']),
-        '/'.join([sim_data, '*.h'])
+        'bin/*.conf',
+        'requirements.txt',
+        '/'.join([WEB_STATIC, 'css', '*']),
+        '/'.join([WEB_STATIC, 'font-awesome', 'css', '*']),
+        '/'.join([WEB_STATIC, 'font-awesome', 'fonts', '*']),
+        '/'.join([WEB_STATIC, 'images', '*']),
+        '/'.join([WEB_STATIC, 'js', '*.js']),
+        '/'.join([WEB_STATIC, 'js', 'plugins', 'metisMenu', '*']),
+        '/'.join([WEB_TEMPLATES, '*']),
+        '/'.join([SIM_DATA, 'windows', '*.pyd']),
+        '/'.join([SIM_DATA, 'linux', '*.so']),
+        '/'.join([SIM_DATA, '*.h'])
     ]},
-    install_requires=deplist,
+    install_requires=REQUIREMENTS,
     # Must extract zip to edit conf files.
     zip_safe=False,
-    version=VERSION,
     author='Thomas Watteyne',
     author_email='watteyne@eecs.berkeley.edu',
     description='Wireless sensor network monitoring, visualization, and debugging tool',
@@ -111,7 +79,7 @@ setup(
     url='https://openwsn.atlassian.net/wiki/display/OW/OpenVisualizer',
     keywords=['6TiSCH', 'Internet of Things', '6LoWPAN', '802.15.4e', 'sensor', 'mote'],
     platforms=['platform-independent'],
-    license='BSD 3-Clause',
+    license=LICENSE,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -124,5 +92,4 @@ setup(
         'Topic :: Internet',
         'Topic :: Software Development',
     ],
-    cmdclass={'build_py': build_py},
 )
