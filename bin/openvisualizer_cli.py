@@ -37,6 +37,28 @@ log = logging.getLogger('OpenVisualizerCli')
 
 coloredlogs.install()
 
+# ============================ functions =======================================
+
+def list_from_string(list_str=None):
+    """Get list of items from `list_str`
+
+    >>> list_from_string(None)
+    []
+    >>> list_from_string("")
+    []
+    >>> list_from_string("  ")
+    []
+    >>> list_from_string("a")
+    ['a']
+    >>> list_from_string("a  ")
+    ['a']
+    >>> list_from_string("a b  c")
+    ['a', 'b', 'c']
+    """
+    value = (list_str or '').split(' ')
+    return [v for v in value if v]
+
+# ============================ class ===========================================
 
 class OpenVisualizerCli(Cmd):
 
@@ -324,6 +346,14 @@ def _add_parser_args(parser):
         default='.',
         action='store',
         help='working directory'
+    )
+
+    parser.add_argument(
+        '--port-mask',
+        dest='port_mask',
+        type=list_from_string,
+        action='store',
+        help='port mask for serial port detection, e.g \'/dev/tty/USB*\''
     )
 
 

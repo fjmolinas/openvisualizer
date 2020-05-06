@@ -38,7 +38,7 @@ class OpenVisualizerApp(object):
     """
 
     def __init__(self, conf_dir, data_dir, log_dir, simulator_mode, num_motes, trace, debug, use_page_zero,
-                 sim_topology, iotlab_motes, testbed_motes, path_topo, mqtt_broker_address, opentun):
+                 sim_topology, iotlab_motes, testbed_motes, path_topo, mqtt_broker_address, opentun, port_mask):
 
         # store params
         self.conf_dir = conf_dir
@@ -51,6 +51,7 @@ class OpenVisualizerApp(object):
         self.use_page_zero = use_page_zero
         self.iotlab_motes = iotlab_motes
         self.testbed_motes = testbed_motes
+        self.port_mask = port_mask
         self.path_topo = path_topo
 
         # local variables
@@ -109,7 +110,7 @@ class OpenVisualizerApp(object):
             # in "hardware" mode, motes are connected to the serial port
 
             self.mote_probes = [
-                moteprobe.MoteProbe(mqtt_broker_address, serial_port=p) for p in moteprobe.find_serial_ports()
+                moteprobe.MoteProbe(mqtt_broker_address, serial_port=p) for p in moteprobe.find_serial_ports(port_mask=self.port_mask)
             ]
 
         # create a MoteConnector for each MoteProbe
@@ -284,6 +285,7 @@ def main(parser, conf_dir, data_dir, log_dir, sim_motes):
                          'trace           = {0}'.format(args.trace),
                          'debug           = {0}'.format(args.debug),
                          'mqtt-broker     = {0}'.format(args.mqtt_broker),
+                         'port-mask       = {0}'.format(args.port_mask),
                          'testbed_motes   = {0}'.format(args.testbed_motes),
                          'use_page_zero   = {0}'.format(args.use_page_zero)],
                         )))
@@ -301,6 +303,7 @@ def main(parser, conf_dir, data_dir, log_dir, sim_motes):
         use_page_zero=args.use_page_zero,
         sim_topology=args.sim_topology,
         iotlab_motes=args.iotlab_motes,
+        port_mask=args.port_mask,
         testbed_motes=args.testbed_motes,
         path_topo=args.path_topo,
         mqtt_broker_address=args.mqtt_broker,

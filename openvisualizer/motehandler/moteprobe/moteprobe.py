@@ -42,7 +42,7 @@ BAUDRATE_IOTLAB = 500000
 
 # ============================ functions =======================================
 
-def find_serial_ports(is_iot_motes=False):
+def find_serial_ports(is_iot_motes=False, port_mask=None):
     """
     Returns the serial ports of the motes connected to the computer.
 
@@ -52,25 +52,29 @@ def find_serial_ports(is_iot_motes=False):
     """
     serial_ports = []
 
-    if os.name == 'nt':
-        path = 'HARDWARE\\DEVICEMAP\\SERIALCOMM'
-        try:
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path)
-            for i in range(winreg.QueryInfoKey(key)[1]):
-                try:
-                    val = winreg.EnumValue(key, i)
-                except:
-                    pass
-                else:
-                    serial_ports.append((str(val[1]), BAUDRATE_LOCAL_BOARD))
-        except Exception:
-            pass
+    if port_mask == None:
+        if os.name == 'nt':
+            path = 'HARDWARE\\DEVICEMAP\\SERIALCOMM'
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path)
+                for i in range(winreg.QueryInfoKey(key)[1]):
+                    try:
+                        val = winreg.EnumValue(key, i)
+                    except:
+                        pass
+                    else:
+                        serial_ports.append((str(val[1]), BAUDRATE_LOCAL_BOARD))
+            except Exception:
+                pass
 
-    elif os.name == 'posix':
-        if platform.system() == 'Darwin':
-            port_mask = ['/dev/tty.usbserial-*']
-        else:
-            port_mask = ['/dev/ttyUSB*']
+        elif os.name == 'posix':
+            if platform.system() == 'Darwin':
+                port_mask = ['/dev/tty.usbserial-*']
+            else:
+                port_mask = ['/dev/ttyUSB*']
+            for mask in port_mask:
+                serial_ports += [(s, BAUDRATE_IOTLAB) for s in glob.glob(mask)]
+    else:
         for mask in port_mask:
             serial_ports += [(s, BAUDRATE_IOTLAB) for s in glob.glob(mask)]
 

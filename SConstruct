@@ -56,6 +56,7 @@ Targets:
           --nosimcopy   Skips copying simulation firmware at startup from the openwsn-fw directory.
           --ovdebug     Enable debug mode; more detailed logging
           --usePageZero Use page number 0 in page dispatch of 6lowpan packet (only works within one-hop).
+          --port_mask   List of serial port mask to scan for, e.g. "/dev/ttyUSB* /dev/ttyACM* /dev/ttyTOTO"
 
     copy-simfw:
         Copy files for the simulator, generated from an OpenWSN firmware build on this host. Assumes firmware top-level
@@ -200,6 +201,12 @@ AddOption('--usePageZero',
           default=False,
           action='store_true')
 runnerEnv['USEPAGEZERO'] = GetOption('usePageZero')
+
+AddOption('--port-mask',
+          dest='port_mask',
+          default=None,
+          type='string')
+runnerEnv['PORT_MASK'] = GetOption('port_mask')
 
 # ============================ SCons targets ===================================
 
