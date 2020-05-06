@@ -356,6 +356,14 @@ def _add_parser_args(parser):
         help='port mask for serial port detection, e.g \'/dev/tty/USB*\''
     )
 
+    parser.add_argument(
+        '--baudrate',
+        dest='baudrate',
+        type=list_from_string,
+        action='store',
+        help='List of baudrates to probe for, e.g \'115200 500000\''
+    )
+
 
 # ============================ main ============================================
 

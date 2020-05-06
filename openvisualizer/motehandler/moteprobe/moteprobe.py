@@ -40,7 +40,7 @@ BAUDRATE_IOTLAB = 500000
 
 # ============================ functions =======================================
 
-def find_serial_ports(is_iot_motes=False, port_mask=None, baudrates=[115200]):
+def find_serial_ports(is_iot_motes=False, port_mask=None, baudrate=[115200]):
     """
     Returns the serial ports of the motes connected to the computer.
 
@@ -85,9 +85,9 @@ def find_serial_ports(is_iot_motes=False, port_mask=None, baudrates=[115200]):
         # Find all OpenWSN motes that answer to the TRIGGER_SERIALECHO commands
         for port in serial_ports:
             try:
-                for baudrate in baudrates:
-                    log.debugp("Probing port {} at baud {}".format(port, baudrate))
-                    probe = MoteProbe(mqtt_broker_address=None, serial_port=(port, baudrate))
+                for baud in baudrate:
+                    print("Probing port {} at baud {}".format(port, baud))
+                    probe = MoteProbe(mqtt_broker_address=None, serial_port=(port, baud))
                     while not hasattr(probe, 'serial'):
                         pass
                     tester = SerialTester(probe)
@@ -95,7 +95,7 @@ def find_serial_ports(is_iot_motes=False, port_mask=None, baudrates=[115200]):
                     tester.set_timeout(2)
                     tester.test(blocking=True)
                     if tester.get_stats()['numOk'] >= 1:
-                        mote_ports.append((port, baudrate))
+                        mote_ports.append((port, baud))
                         break
             except Exception as e:
                 raise e

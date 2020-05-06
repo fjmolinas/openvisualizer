@@ -208,6 +208,12 @@ AddOption('--port-mask',
           type='string')
 runnerEnv['PORT_MASK'] = GetOption('port_mask')
 
+AddOption('--baudrate',
+          dest='baudrate',
+          default=None,
+          type='string')
+runnerEnv['BAUDRATE'] = GetOption('baudrate')
+
 # ============================ SCons targets ===================================
 
 # ===== copy-simfw

@@ -80,6 +80,9 @@ def ov_runner(target, source, env):
     if env['PORT_MASK']:
         arg_list.append('--port-mask={0}'.format(env['PORT_MASK']))
 
+    if env['BAUDRATE']:
+        arg_list.append('--baudrate={0}'.format(env['BAUDRATE']))
+
     result = 0
     try:
         p = subprocess.Popen(arg_list, env=sub_env)
