@@ -86,7 +86,7 @@ def find_serial_ports(is_iot_motes=False, port_mask=None, baudrate=[115200]):
         for port in serial_ports:
             try:
                 for baud in baudrate:
-                    print("Probing port {} at baud {}".format(port, baud))
+                    log.debug("Probing port {} at baud {}".format(port, baud))
                     probe = MoteProbe(mqtt_broker_address=None, serial_port=(port, baud))
                     while not hasattr(probe, 'serial'):
                         pass
