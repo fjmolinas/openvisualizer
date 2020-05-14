@@ -238,7 +238,7 @@ class MoteProbe(threading.Thread):
 
         # local variables
         self.hdlc = openhdlc.OpenHdlc()
-        self.last_rx_byte = self.hdlc.HDLC_FLAG
+        self.last_rx_byte = None
         self.is_receiving = False
         self.input_buf = ''
         self.output_buf = []
@@ -348,6 +348,10 @@ class MoteProbe(threading.Thread):
                                     log.debug("{0}: {2} dehdlcized input: {1}".format(
                                         self.name, format_string_buf(self.input_buf), format_string_buf(temp_buf)))
 
+                                # on valid frame discard HDLC_FLAG end of frame
+                                # byte to not be cosidered as a start of frame
+                                # HDLC_FLAG
+                                rx_byte = None
                             except openhdlc.HdlcException as err:
                                 log.warning('{0}: invalid serial frame: {2} {1}'.format(
                                     self.name,
