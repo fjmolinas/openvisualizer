@@ -26,10 +26,11 @@ log.addHandler(logging.NullHandler())
 # ============================ class ===================================
 
 class SerialMoteProbe(MoteProbe):
-    def __init__(self, port, baudrate):
+    def __init__(self, port, baudrate, max_burst=100):
         self._port = port
         self._baudrate = baudrate
         self._serial = None
+        self._max_burst = max_burst
 
         # initialize the parent class
         MoteProbe.__init__(self, portname=port)
@@ -44,6 +45,10 @@ class SerialMoteProbe(MoteProbe):
     @property
     def serial(self):
         return self._serial
+
+    @property
+    def max_burst(self):
+        return self._max_burst
 
     @classmethod
     def probe_serial_ports(cls, baudrate, port_mask=None):
@@ -88,10 +93,12 @@ class SerialMoteProbe(MoteProbe):
 
     def _send_data(self, data):
         hdlc_data = self.hdlc.hdlcify(data)
-        bytes_written = 0
-        self._serial.flush()
-        while bytes_written != len(bytearray(hdlc_data)):
-            bytes_written += self._serial.write(hdlc_data)
+        hdlc_len = len(bytearray(hdlc_data))
+        sent = 0
+        while not self.quit and sent != hdlc_len:
+            rem = hdlc_len - sent
+            to_send = min(self._max_burst, rem)
+            sent += self._serial.write(hdlc_data[sent:sent + to_send])
 
     def _rcv_data(self, rx_bytes=1):
         data = self._serial.read(rx_bytes)
@@ -107,7 +114,7 @@ class SerialMoteProbe(MoteProbe):
 
     def _attach(self):
         log.debug("attaching to serial port: {} @ {}".format(self._port, self._baudrate))
-        self._serial = serial.Serial(self._port, self._baudrate, timeout=1, xonxoff=True, rtscts=False, dsrdtr=False)
+        self._serial = serial.Serial(self._port, self._baudrate, writeTimeout=1, timeout=1, xonxoff=True, rtscts=False, dsrdtr=False)
         log.debug("self._serial: {}".format(self._serial))
 
     @staticmethod

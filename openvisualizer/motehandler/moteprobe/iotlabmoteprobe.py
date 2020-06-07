@@ -32,7 +32,8 @@ class IotlabMoteProbe(MoteProbe):
     IOTLAB_FRONTEND_BASE_URL = 'iot-lab.info'
 
     def __init__(self, iotlab_mote, iotlab_user=None, iotlab_passwd=None,
-                 iotlab_key_file=None, iotlab_key_pas=None, xonxoff=True):
+                 iotlab_key_file=None, iotlab_key_pas=None, xonxoff=True,
+                 max_burst=100):
         self.iotlab_mote = iotlab_mote
 
         if self.IOTLAB_FRONTEND_BASE_URL in self.iotlab_mote:
@@ -51,6 +52,7 @@ class IotlabMoteProbe(MoteProbe):
         self._ssh_tunnel = None
         self._socket = None
         self.xonxoff = xonxoff
+        self._max_burst = max_burst
         self._cts = False
 
         # initialize the parent class
@@ -111,6 +113,10 @@ class IotlabMoteProbe(MoteProbe):
     def ssh_tunnel(self):
         return self._ssh_tunnel
 
+    @property
+    def max_burst(self):
+        return self._max_burst
+
     # ======================== private =================================
 
     @staticmethod
@@ -144,12 +150,14 @@ class IotlabMoteProbe(MoteProbe):
     def _send_data(self, data):
         hdlc_data = self.hdlc.hdlcify(data)
         hdlc_len = len(bytearray(hdlc_data))
-        bytes_written = 0
-        while not self.quit and bytes_written != hdlc_len:
+        sent = 0
+        while not self.quit and sent != hdlc_len:
             if self.xonxoff and not self._cts:
                 continue
             else:
-                bytes_written += self._socket.send(hdlc_data)
+                rem = hdlc_len - sent
+                to_send = min(self._max_burst, rem)
+                sent += self._socket.send(hdlc_data[sent:sent + to_send])
 
     def _detach(self):
         if self._socket is not None:
