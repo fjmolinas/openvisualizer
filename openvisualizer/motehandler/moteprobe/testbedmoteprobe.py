@@ -24,7 +24,7 @@ log.addHandler(logging.NullHandler())
 # ============================ class ===================================
 
 class OpentestbedMoteProbe(MoteProbe):
-    BASE_TOPIC = 'opentestbed/deviceType/mote/deviceId'
+    BASE_MOTE_TOPIC = 'opentestbed/deviceType/mote/deviceId'
 
     def __init__(self, mqtt_broker, testbedmote_eui64):
         self.mqtt_broker = mqtt_broker
@@ -58,7 +58,7 @@ class OpentestbedMoteProbe(MoteProbe):
 
         # publish the cmd message
         self.mqtt_client.publish(
-            topic='{}/{}/cmd/tomoteserialbytes'.format(self.BASE_TOPIC, self.testbedmote_eui64),
+            topic='{}/{}/cmd/tomoteserialbytes'.format(self.BASE_MOTE_TOPIC, self.testbedmote_eui64),
             payload=json.dumps(payload_buffer),
         )
 
@@ -80,7 +80,7 @@ class OpentestbedMoteProbe(MoteProbe):
     # ==== mqtt callback functions =====================================
 
     def _on_mqtt_connect(self, client, userdata, flags, rc):
-        client.subscribe('{}/{}/notif/frommoteserialbytes'.format(self.BASE_TOPIC, self.testbedmote_eui64))
+        client.subscribe('{}/{}/notif/frommoteserialbytes'.format(self.BASE_MOTE_TOPIC, self.testbedmote_eui64))
 
     def _on_mqtt_message(self, client, userdata, message):
         try:
@@ -99,9 +99,12 @@ class OpentestbedMoteProbe(MoteProbe):
 class OpentestbedMoteFinder(object):
     OPENTESTBED_RESP_STATUS_TIMEOUT = 10
 
-    def __init__(self, mqtt_broker):
+    BASE_BOX_TOPIC = 'opentestbed/deviceType/box/deviceId'
+
+    def __init__(self, mqtt_broker, motes):
         self.opentestbed_motelist = set()
         self.mqtt_broker = mqtt_broker
+        self.motes = motes
 
         # create mqtt client
         self.mqtt_client = mqtt.Client('FindMotes')
@@ -129,15 +132,23 @@ class OpentestbedMoteFinder(object):
     def log_cb(client, userdata, level, buf):
         log.info(buf)
 
+    def _mote_resp_topic(self, mote):
+        return '{}/{}/resp/status'.format(self.BASE_BOX_TOPIC, mote)
+
     def _on_mqtt_connect(self, client, userdata, flags, rc):
 
         log.success("connected to broker: {0}".format(self.mqtt_broker))
 
-        client.subscribe('opentestbed/deviceType/box/deviceId/+/resp/status')
+        # Subscribe to all boxes
+        topic = '{}/{}/resp/status'.format(self.BASE_BOX_TOPIC, '+')
+        log.debug("subscribing to topic {}".format(topic))
+        client.subscribe(topic)
 
         payload_status = {'token': 123}
-        # publish the cmd message
-        client.publish(topic='opentestbed/deviceType/box/deviceId/all/cmd/status', payload=json.dumps(payload_status))
+        # publish the cmd message to all motes
+        topic = '{}/all/cmd/status'.format(self.BASE_BOX_TOPIC)
+        log.debug("publishing to topic {}".format(topic))
+        client.publish(topic=topic, payload=json.dumps(payload_status))
 
     def _on_mqtt_message(self, client, userdata, message):
 
@@ -146,4 +157,5 @@ class OpentestbedMoteFinder(object):
 
         for mote in payload_status['returnVal']['motes']:
             if 'EUI64' in mote:
-                self.opentestbed_motelist.add(mote['EUI64'])
+                if mote['EUI64'] in self.motes or self.motes == 'all':
+                    self.opentestbed_motelist.add(mote['EUI64'])

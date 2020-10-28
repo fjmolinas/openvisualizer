@@ -119,9 +119,9 @@ class OpenVisualizerServer(SimpleXMLRPCServer, EventBusClient):
     """
 
     def __init__(self, host, port, simulator_mode, debug, vcdlog,
-                 use_page_zero, sim_topology, testbed_motes, mqtt_broker,
-                 opentun, fw_path, auto_boot, root, port_mask, baudrate,
-                 topo_file, iotlab_motes, iotlab_passwd, iotlab_user,
+                 use_page_zero, sim_topology, opentestbed, opentestbed_motes,
+                 mqtt_broker, opentun, fw_path, auto_boot, root, port_mask,
+                 baudrate, topo_file, iotlab_motes, iotlab_passwd, iotlab_user,
                  iotlab_key_file, iotlab_key_pas):
 
         # store params
@@ -220,8 +220,8 @@ class OpenVisualizerServer(SimpleXMLRPCServer, EventBusClient):
                 iotlab_key_pas=iotlab_key_pas,
                 baudrate=baudrate
                 )
-        elif testbed_motes:
-            motes_finder = testbedmoteprobe.OpentestbedMoteFinder(mqtt_broker)
+        elif opentestbed:
+            motes_finder = testbedmoteprobe.OpentestbedMoteFinder(mqtt_broker, opentestbed_motes)
             mote_list = motes_finder.get_opentestbed_motelist()
             for p in mote_list:
                 self.mote_probes.append(testbedmoteprobe.OpentestbedMoteProbe(mqtt_broker, testbedmote_eui64=p))
@@ -802,10 +802,19 @@ def _add_parser_args(parser):
 
     parser.add_argument(
         '-b', '--opentestbed',
-        dest='testbed_motes',
+        dest='opentestbed',
         default=False,
         action='store_true',
         help='Connect to motes from opentestbed over the MQTT server (see option \'--mqtt-broker\')',
+    )
+
+    parser.add_argument(
+        '-bm','--opentestbed-motes',
+        dest='opentestbed_motes',
+        default='all',
+        type=str,
+        nargs='+',
+        help='comma-separated list of Opentestbed motes eui64 (e.g. "00-12-4b-00-14-b5-b6-05, 00-12-4b-00-14-b5-b5-71)',
     )
 
     parser.add_argument(
@@ -969,8 +978,9 @@ def main():
     if not args.simulator_mode and args.baudrate:
         options.append('baudrates to probe      = {0}'.format(args.baudrate))
 
-    if args.testbed_motes:
-        options.append('opentestbed             = {0}'.format(args.testbed_motes))
+    if args.opentestbed:
+        options.append('opentestbed motes       = {0}'.format(args.opentestbed_motes))
+        options.append('opentestbed             = {0}'.format(args.opentestbed))
         options.append('mqtt broker             = {0}'.format(args.mqtt_broker))
 
     if args.topo_file:
@@ -994,7 +1004,8 @@ def main():
         sim_topology=args.sim_topology,
         port_mask=args.port_mask,
         baudrate=args.baudrate,
-        testbed_motes=args.testbed_motes,
+        opentestbed=args.opentestbed,
+        opentestbed_motes=args.opentestbed_motes,
         mqtt_broker=args.mqtt_broker,
         opentun=args.opentun,
         fw_path=args.fw_path,
