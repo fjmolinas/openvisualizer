@@ -26,7 +26,7 @@ log.addHandler(logging.NullHandler())
 # ============================ class ===================================
 
 class SerialMoteProbe(MoteProbe):
-    def __init__(self, port, baudrate, max_burst=100):
+    def __init__(self, port, baudrate, max_burst=1):
         self._port = port
         self._baudrate = baudrate
         self._serial = None
